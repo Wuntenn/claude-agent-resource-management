@@ -1,0 +1,26 @@
+node_modules/
+
+# Runtime coordination/state files the CLI writes under a project checkout
+# (production default is ~/.claude/agent-state/, outside this repo, but a
+# test run or a local override can point ARM_* env vars in here).
+.claude/agent-state/
+resource-coordination.json
+resource-history.json
+resource-queue.json
+footprint-state.json
+liveness-log.json
+liveness-log.json.1
+launchd-watchdog-backoff.json
+watchdog-backoff.json
+
+# Diagnostics collector output (gitignored at the source too — on-host
+# forensics artifacts, never meant to be committed).
+scripts/agent-resource-management/diagnostics/output/
+
+# Coverage / test artifacts
+coverage/
+*.log
+npm-debug.log*
+
+# OS cruft
+.DS_Store

@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  launchd LaunchAgent — OS-level detection-only backstop for the ARM
+  watchdog/EVICT beat. See scripts/agent-resource-management/launchd/README.md
+  before installing this — it is opt-in, genuinely unattended, and has a
+  narrower scope than the name "watchdog" suggests: only the deadlock
+  tripwire (Step 2 of runWatchdogBeat) is confirmed to fire through this
+  path today. Cross-orchestrator eviction authorization is intentionally out of scope for this beat.
+
+  This file is a TEMPLATE committed to the repo — it cannot know your clone
+  path or your node binary path at commit time. Two placeholders below MUST
+  be substituted with absolute paths before this file is usable:
+
+    __NODE_BIN__      → output of `command -v node` (or `which node`)
+    __WRAPPER_PATH__   → absolute path to
+                          scripts/agent-resource-management/lib/watchdog-beat-launchd.mjs
+                          inside YOUR clone of this repo
+
+  Do not edit a copy of this file in place inside the repo and `launchctl
+  load` it directly — copy it out to ~/Library/LaunchAgents/ first (see the
+  README's install steps), substitute the placeholders in the COPY, and load
+  the copy. Keeping the repo copy placeholder-only means it stays valid for
+  every clone/host.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.example.arm-watchdog</string>
+
+  <!--
+    Absolute paths only — launchd provides a minimal execution environment
+    with no inherited PATH, no shell, no nvm/rc-file sourcing. A bare "node"
+    token will fail to resolve; ProgramArguments[0] must be the fully
+    resolved node interpreter path, not a bare command name.
+  -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>__NODE_BIN__</string>
+    <string>__WRAPPER_PATH__</string>
+  </array>
+
+  <!--
+    StartInterval only — deliberately NO KeepAlive key. KeepAlive plus a
+    crash-restart loop is exactly the unattended-repeated-restart risk this
+    backstop must avoid; the wrapper (watchdog-beat-launchd.mjs) always
+    exits 0 by design, but StartInterval alone is still the correct choice
+    here regardless, since this is a periodic poll, not a long-running
+    service that should be kept alive.
+
+    900 seconds (15 minutes) matches DEFAULT_LIVENESS_THRESHOLD_MS and
+    DEFAULT_DEADLOCK_WINDOW_MS in cli.mjs — firing any faster than the
+    bounds it evaluates against would not detect anything sooner, only
+    waste cycles; firing much slower would widen the detection latency
+    beyond what those bounds already assume. Note StartInterval does NOT
+    replay missed fires across sleep — see the README's cadence-caveat
+    section for what this means in practice on a laptop that sleeps most
+    of the day.
+  -->
+  <key>StartInterval</key>
+  <integer>900</integer>
+
+  <!--
+    Deliberately NOT the app-level liveness log
+    (resolveLivenessLogFilePath()'s ~/.claude/agent-state/liveness-log.json
+    default, or whatever $ARM_LIVENESS_LOG_FILE points at) — that file has
+    its own rotation/cap (lib/liveness-log.mjs, LIVENESS_LOG_MAX_ENTRIES).
+    These paths capture only this LaunchAgent's own process-level
+    stdout/stderr (launchd invocation diagnostics, the wrapper's own
+    watchdog-beat-launchd: failure markers) — a small, separate log, not
+    the durable detection record.
+
+    NEITHER path is rotated or size-capped by this tooling. Because the
+    wrapper resets its own isolated backoff file before every invocation
+    (see watchdog-beat-launchd.mjs), the underlying beat is always due, so
+    StandardOutPath gets one small JSON line appended roughly every 15
+    minutes for as long as this job stays loaded — it will grow without
+    bound over a long-lived install. Truncate it yourself periodically if
+    that matters on your machine (see the README's "Verify it's actually
+    running" section for what a healthy line looks like).
+  -->
+  <key>StandardOutPath</key>
+  <string>/tmp/com.example.arm-watchdog.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/com.example.arm-watchdog.err.log</string>
+
+  <key>RunAtLoad</key>
+  <false/>
+
+  <!--
+    This is a lightweight, brief job (a `node` process plus a `ps` shell-out,
+    firing every 900s), but the whole point of agent-resource-management is
+    careful pacing on a resource-constrained 16GB/single-SSD host — mark it
+    Background so the OS deprioritises it relative to interactive/foreground
+    work during a real orchestrator session's busiest moments, rather than
+    competing on equal scheduling footing.
+  -->
+  <key>ProcessType</key>
+  <string>Background</string>
+</dict>
+</plist>

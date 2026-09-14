@@ -1,0 +1,38 @@
+{
+  "name": "claude-agent-resource-management",
+  "version": "1.0.0",
+  "description": "A traffic-light coordination CLI that paces concurrent Claude Code / Node orchestrator agents on a resource-constrained macOS host so they maximize completed work per hour without crashing it.",
+  "private": false,
+  "type": "module",
+  "license": "MIT",
+  "author": "Wuntenn",
+  "homepage": "https://github.com/Wuntenn/claude-agent-resource-management",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Wuntenn/claude-agent-resource-management.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Wuntenn/claude-agent-resource-management/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.config.mjs",
+    "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.config.mjs --watch"
+  },
+  "keywords": [
+    "claude-code",
+    "agent",
+    "orchestration",
+    "resource-management",
+    "macos"
+  ],
+  "dependencies": {
+    "micromatch": "4.0.8"
+  },
+  "devDependencies": {
+    "@jest/globals": "^30.5.1",
+    "jest": "^30.5.1"
+  }
+}
